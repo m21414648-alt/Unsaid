@@ -1,41 +1,25 @@
+
 {
-  "name": "@workspace/api-server",
-  "version": "0.0.0",
+  "name": "unsaid-web",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
-    "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:voice-storage": "tsx --test src/__tests__/voice-storage-streams.test.ts src/__tests__/voice-security.test.ts",
-    "test:voice-storage:live": "VOICE_STORAGE_LIVE=1 node --expose-gc --import tsx src/__tests__/voice-storage-live.test.ts"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "dependencies": {
-    "@clerk/express": "^2.1.73",
-    "@clerk/shared": "^4.37.0",
-    "@google-cloud/storage": "^8.2.0",
-    "cookie-parser": "^1.4.7",
-    "cors": "^2.8.6",
-    "drizzle-orm": "^0.38.0", 
-    "express": "^5.2.1",
-    "google-auth-library": "^11.1.0",
-    "http-proxy-middleware": "^4.2.0",
-    "pino": "^9.14.0",
-    "pino-http": "^10.5.0",
-    "web-push": "^3.6.7",
-    "zod": "^3.23.0", 
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "lucide-react": "^0.453.0"
   },
   "devDependencies": {
-    "@types/cookie-parser": "^1.4.10",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/node": "^22.0.0", 
-    "@types/web-push": "^3.6.4",
-    "esbuild": "0.28.2",
-    "esbuild-plugin-pino": "^2.3.3",
-    "pino-pretty": "^13.1.3",
-    "thread-stream": "3.1.0",
-    "tsx": "^4.19.0" 
+    "@types/react": "^18.3.1",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.1",
+    "tailwindcss": "^3.4.14",
+    "typescript": "^5.5.3",
+    "vite": "^5.4.10"
   }
-}
+} 
