@@ -18,6 +18,9 @@
     "tailwind-merge": "^2.5.4"
   },
   "devDependencies": {
+    "@replit/vite-plugin-cartographer": "^0.0.14",
+    "@replit/vite-plugin-dev-banner": "^0.0.14",
+    "@replit/vite-plugin-runtime-error-modal": "^0.0.3",
     "@tailwindcss/vite": "^4.0.0",
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.1",
