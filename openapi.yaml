@@ -1,0 +1,1331 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: voice
+    description: Private Arabic AAC voice recordings and shared voice assets
+  - name: feelings
+    description: Private communication-card activity for the authenticated account
+  - name: family
+    description: Independent child-parent linking and opt-in private Web Push
+paths:
+  /admin/feelings/progress:
+    get:
+      operationId: getAdminFeelingProgress
+      tags: [feelings]
+      summary: Get private, account-verified child-by-child communication-card activity and weekly trends
+      security:
+        - ClerkSession: []
+      responses:
+        "200":
+          description: Creator-only activity and the creator's own private annotations; no account IDs or child-authored personal notes
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminFeelingProgress"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /admin/feelings/progress/note:
+    put:
+      operationId: setAdminFeelingNote
+      tags: [feelings]
+      summary: Save the authenticated creator's private annotation for one child's communication card
+      security:
+        - ClerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/AdminFeelingNoteInput"}
+      responses:
+        "200":
+          description: Private creator annotation saved or cleared; never added to child or caregiver activity
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AdminFeelingNote"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /admin/feelings/progress/history:
+    get:
+      operationId: getAdminFeelingHistory
+      tags: [feelings]
+      summary: Page through every saved child card-selection time, without a weekly retention cutoff
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: childRef
+          in: query
+          required: true
+          schema: {type: string, pattern: "^[A-Za-z0-9_-]{43}$"}
+          description: Opaque dashboard reference, never a Clerk account ID; does not grant authorization
+        - name: cardKey
+          in: query
+          required: false
+          schema: {$ref: "#/components/schemas/FeelingCardKey"}
+        - name: cursor
+          in: query
+          required: false
+          schema: {type: string, maxLength: 512, pattern: "^[A-Za-z0-9_-]+$"}
+      responses:
+        "200":
+          description: Up to 50 exact selection timestamps; nextCursor provides access to older saved history
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/AdminFeelingHistoryPage"}
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "404": {$ref: "#/components/responses/NotFound"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+  /family/guest/session:
+    get:
+      operationId: getFamilyDeviceSession
+      tags: [family]
+      responses:
+        "200":
+          description: Current browser device session, without a Clerk account
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyDeviceSession"}
+    post:
+      operationId: startFamilyDeviceSession
+      tags: [family]
+      responses:
+        "200":
+          description: Same-origin HttpOnly device cookie created or reused
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyDeviceSession"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+    delete:
+      operationId: endFamilyDeviceSession
+      tags: [family]
+      responses:
+        "204": {description: Device access revoked and cookie cleared}
+  /family/guest/requests:
+    post:
+      operationId: requestFamilyDevice
+      tags: [family]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyLinkInput"}
+      responses:
+        "202":
+          description: Pending child approval; no activity access and no child identity disclosure
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyDeviceRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /family/guest/requests/{id}:
+    get:
+      operationId: getFamilyDeviceRequest
+      tags: [family]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "200":
+          description: This browser's own request status
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyDeviceRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "404": {$ref: "#/components/responses/NotFound"}
+  /family/requests:
+    get:
+      operationId: getFamilyDeviceRequests
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "200":
+          description: Pending device requests owned by this signed-in child only
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/FamilyDeviceRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+  /family/requests/{id}:
+    post:
+      operationId: decideFamilyDevice
+      tags: [family]
+      security: [{ClerkSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyApprovalInput"}
+      responses:
+        "200":
+          description: Explicit approval or rejection on the child's signed-in device
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyDeviceRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+  /family/code/rotate:
+    post:
+      operationId: rotateFamilyCode
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "200":
+          description: Explicitly replace the stable code and invalidate pending requests; approved devices remain linked
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyCode"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+  /family/profile:
+    get:
+      operationId: getFamilyProfile
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "200":
+          description: Account role; unconfigured existing accounts are parents
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyProfile"}
+    post:
+      operationId: initializeFamilyProfile
+      tags: [family]
+      security: [{ClerkSession: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyRoleInput"}
+      responses:
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "200":
+          description: Immutable account role
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyProfile"}
+        "409":
+          $ref: "#/components/responses/Conflict"
+  /family/code:
+    post:
+      operationId: createFamilyCode
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "201":
+          description: Child's stable code; creates it once then returns the same value without expiry
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyCode"}
+  /family/links:
+    get:
+      operationId: getFamilyLinks
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "200":
+          description: Links visible to this account only
+          content:
+            application/json:
+              schema:
+                type: array
+                items: {$ref: "#/components/schemas/FamilyLink"}
+    post:
+      operationId: linkFamilyAccount
+      tags: [family]
+      security: [{ClerkSession: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyLinkInput"}
+      responses:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "201":
+          description: Account linked
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyLink"}
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /family/links/{id}:
+    delete:
+      operationId: unlinkFamilyAccount
+      tags: [family]
+      security: [{ClerkSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "204":
+          description: Link revoked by either account
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /family/links/{id}/activity:
+    get:
+      operationId: getLinkedChildActivity
+      tags: [family]
+      security: [{ClerkSession: []}]
+      parameters:
+        - {name: id, in: path, required: true, schema: {type: string, format: uuid}}
+      responses:
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "200":
+          description: Child's selection counts and full weekly times; no personal notes or voice
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/LinkedChildActivity"}
+        "404":
+          $ref: "#/components/responses/NotFound"
+  /family/push/config:
+    get:
+      operationId: getFamilyPushConfig
+      tags: [family]
+      security: [{ClerkSession: []}]
+      responses:
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "200":
+          description: Public Web Push key
+          content:
+            application/json:
+              schema: {$ref: "#/components/schemas/FamilyPushConfig"}
+  /family/push/subscriptions:
+    post:
+      operationId: subscribeFamilyPush
+      tags: [family]
+      security: [{ClerkSession: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyPushSubscription"}
+      responses:
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "409": {$ref: "#/components/responses/Conflict"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "204":
+          description: This parent's device subscribed
+    delete:
+      operationId: unsubscribeFamilyPush
+      tags: [family]
+      security: [{ClerkSession: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {$ref: "#/components/schemas/FamilyPushEndpoint"}
+      responses:
+        "400": {$ref: "#/components/responses/BadRequest"}
+        "401": {$ref: "#/components/responses/Unauthorized"}
+        "403": {$ref: "#/components/responses/Forbidden"}
+        "429": {$ref: "#/components/responses/RateLimited"}
+        "503": {$ref: "#/components/responses/ServiceUnavailable"}
+        "204":
+          description: This parent's device unsubscribed
+  /feelings/activity/weekly:
+    get:
+      operationId: getWeeklyFeelingActivity
+      tags: [feelings]
+      summary: Get every account-owned communication-card selection from the rolling last seven days
+      security:
+        - ClerkSession: []
+      responses:
+        "200":
+          description: Card selections and timestamps in the last 168 hours, newest first
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeeklyFeelingActivity"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /feelings/notes/{cardKey}:
+    put:
+      operationId: setFeelingNote
+      tags: [feelings]
+      summary: Save or clear the authenticated account's note for one communication card
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: cardKey
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/FeelingCardKey"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeelingNoteInput"
+      responses:
+        "200":
+          description: Saved note; an empty note clears its text
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeelingNote"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /feelings/activity:
+    get:
+      operationId: getFeelingActivity
+      tags: [feelings]
+      summary: Get account-owned communication-card counts and recent usage times
+      security:
+        - ClerkSession: []
+      responses:
+        "200":
+          description: Counts for every card and the 30 most recent selections
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeelingActivitySummary"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+    post:
+      operationId: recordFeelingActivity
+      tags: [feelings]
+      summary: Record one communication-card selection with a server-generated usage time
+      security:
+        - ClerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FeelingActivityInput"
+      responses:
+        "201":
+          description: Saved selection
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FeelingActivityEvent"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      description: Returns server health status
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+  /voice/profile:
+    get:
+      operationId: getVoiceProfile
+      tags: [voice]
+      summary: Get the authenticated account's voice profile
+      security:
+        - ClerkSession: []
+      responses:
+        "200":
+          description: Voice selection and saved recordings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceProfile"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+    put:
+      operationId: setVoiceProfile
+      tags: [voice]
+      summary: Set the authenticated account's preferred voice
+      security:
+        - ClerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: "#/components/schemas/SetVoiceProfileInput"
+      responses:
+        "200":
+          description: Updated voice selection and saved recordings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceProfile"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+  /voice/uploads:
+    post:
+      operationId: requestVoiceUpload
+      tags: [voice]
+      summary: Request a short-lived direct upload URL for a private recording
+      security:
+        - ClerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: "#/components/schemas/VoiceUploadRequest"
+      responses:
+        "201":
+          description: Upload URL and server-minted pending upload id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceUploadGrant"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /voice/recordings:
+    post:
+      operationId: commitVoiceRecording
+      tags: [voice]
+      summary: Validate and commit a private recording upload
+      security:
+        - ClerkSession: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+                $ref: "#/components/schemas/VoiceUploadCommit"
+      responses:
+        "201":
+          description: Committed recording metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VoiceRecording"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          $ref: "#/components/responses/Conflict"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /voice/recordings/{id}:
+    delete:
+      operationId: deleteVoiceRecording
+      tags: [voice]
+      summary: Delete an account-owned recording
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "204":
+          description: Recording deleted
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /voice/recordings/{id}/audio:
+    get:
+      operationId: getVoiceRecordingAudio
+      tags: [voice]
+      summary: Stream an owned private recording, optionally by byte range
+      security:
+        - ClerkSession: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Private audio bytes
+          content:
+            audio/webm:
+              schema:
+                type: string
+                format: binary
+            audio/mp4:
+              schema:
+                type: string
+                format: binary
+            audio/ogg:
+              schema:
+                type: string
+                format: binary
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "206":
+          description: Requested private audio byte range
+          content:
+            audio/webm:
+              schema:
+                type: string
+                format: binary
+            audio/mp4:
+              schema:
+                type: string
+                format: binary
+            audio/ogg:
+              schema:
+                type: string
+                format: binary
+            audio/wav:
+              schema:
+                type: string
+                format: binary
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "416":
+          description: Invalid byte range
+          headers:
+            Content-Range:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "503":
+          $ref: "#/components/responses/ServiceUnavailable"
+  /voice/assets/{voice}/{clipId}:
+    get:
+      operationId: getVoiceAsset
+      tags: [voice]
+      summary: Get a shared public voice clip
+      parameters:
+        - name: voice
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [female, male]
+        - name: clipId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - hungry
+              - thirsty
+              - toilet
+              - sleepy
+              - cold
+              - happy
+              - sad
+              - pain
+              - help
+              - afraid
+              - drawing
+              - preview
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Shared public audio clip
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "206":
+          description: Requested byte range of a shared public audio clip
+          content:
+            audio/mpeg:
+              schema:
+                type: string
+                format: binary
+        "416":
+          description: Invalid byte range
+          headers:
+            Content-Range:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    head:
+      operationId: headVoiceAsset
+      tags: [voice]
+      summary: Get shared public voice clip headers without its audio body
+      parameters:
+        - name: voice
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [female, male]
+        - name: clipId
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - hungry
+              - thirsty
+              - toilet
+              - sleepy
+              - cold
+              - happy
+              - sad
+              - pain
+              - help
+              - afraid
+              - drawing
+              - preview
+        - name: Range
+          in: header
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Headers for a shared public audio clip
+          headers:
+            Content-Type:
+              schema:
+                type: string
+            Accept-Ranges:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+            Cache-Control:
+              schema:
+                type: string
+        "206":
+          description: Headers for the requested byte range of a shared public audio clip
+          headers:
+            Content-Type:
+              schema:
+                type: string
+            Accept-Ranges:
+              schema:
+                type: string
+            Content-Length:
+              schema:
+                type: integer
+            Content-Range:
+              schema:
+                type: string
+            Cache-Control:
+              schema:
+                type: string
+        "416":
+          description: Invalid byte range
+          headers:
+            Content-Range:
+              schema:
+                type: string
+        "404":
+          description: No shared public voice clip was found
+components:
+  schemas:
+    FamilyRoleInput:
+      type: object
+      additionalProperties: false
+      properties:
+        role: {type: string, enum: [parent, child]}
+      required: [role]
+    FamilyProfile:
+      type: object
+      properties:
+        role: {type: string, enum: [parent, child]}
+        initialized: {type: boolean}
+      required: [role, initialized]
+    FamilyCode:
+      type: object
+      properties:
+        code: {type: string, pattern: "^[0-9]{4}$"}
+        expiresAt: {type: [string, "null"], format: date-time}
+      required: [code, expiresAt]
+    FamilyDeviceSession:
+      type: object
+      required: [active, ownerId]
+      properties:
+        active: {type: boolean}
+        ownerId: {type: [string, "null"]}
+    FamilyApprovalInput:
+      type: object
+      required: [approved]
+      properties:
+        approved: {type: boolean}
+    FamilyDeviceRequest:
+      type: object
+      required: [id, pairingLabel, status, linkId, createdAt, expiresAt]
+      properties:
+        id: {type: string, format: uuid}
+        pairingLabel: {type: string}
+        status: {type: string, enum: [pending, approved, rejected, expired, revoked]}
+        linkId: {type: [string, "null"], format: uuid}
+        createdAt: {type: string, format: date-time}
+        expiresAt: {type: string, format: date-time}
+    FamilyLinkInput:
+      type: object
+      additionalProperties: false
+      properties:
+        code: {type: string, pattern: "^(?:[0-9]{4}|[A-HJ-NP-Z2-9]{8})$"}
+      required: [code]
+    FamilyLink:
+      type: object
+      properties:
+        id: {type: string, format: uuid}
+        linkedAt: {type: string, format: date-time}
+      required: [id, linkedAt]
+    LinkedChildActivity:
+      type: object
+      properties:
+        cards:
+          type: array
+          items: {$ref: "#/components/schemas/LinkedChildCard"}
+        events:
+          type: array
+          items: {$ref: "#/components/schemas/FeelingActivityEvent"}
+      required: [cards, events]
+    LinkedChildCard:
+      type: object
+      properties:
+        cardKey: {$ref: "#/components/schemas/FeelingCardKey"}
+        count: {type: integer, minimum: 0}
+        lastUsedAt: {type: [string, "null"], format: date-time}
+      required: [cardKey, count, lastUsedAt]
+    FamilyPushConfig:
+      type: object
+      properties:
+        publicKey: {type: string}
+      required: [publicKey]
+    FamilyPushEndpoint:
+      type: object
+      additionalProperties: false
+      properties:
+        endpoint: {type: string, format: uri, maxLength: 2048}
+      required: [endpoint]
+    FamilyPushSubscription:
+      type: object
+      additionalProperties: false
+      properties:
+        endpoint: {type: string, format: uri, maxLength: 2048}
+        keys:
+          type: object
+          additionalProperties: false
+          properties:
+            p256dh: {type: string, minLength: 80, maxLength: 100}
+            auth: {type: string, minLength: 20, maxLength: 30}
+          required: [p256dh, auth]
+      required: [endpoint, keys]
+    FeelingCardKey:
+      type: string
+      enum: [hungry, thirsty, toilet, sleepy, cold, happy, sad, pain, help, afraid]
+    FeelingNoteInput:
+      type: object
+      additionalProperties: false
+      properties:
+        note:
+          type: string
+          maxLength: 2000
+      required: [note]
+    FeelingNote:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        note:
+          type: string
+          maxLength: 2000
+        updatedAt:
+          type: string
+          format: date-time
+      required: [cardKey, note, updatedAt]
+    WeeklyFeelingActivity:
+      type: object
+      properties:
+        events:
+          type: array
+          description: Each communication-card selection with its server-generated timestamp in the rolling seven-day window
+          items:
+            $ref: "#/components/schemas/FeelingActivityEvent"
+      required: [events]
+    FeelingActivityInput:
+      type: object
+      additionalProperties: false
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+      required: [cardKey]
+    FeelingActivityEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        usedAt:
+          type: string
+          format: date-time
+      required: [id, cardKey, usedAt]
+    FeelingCardActivity:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        count:
+          type: integer
+          minimum: 0
+        lastUsedAt:
+          type: [string, "null"]
+          format: date-time
+        note:
+          type: string
+          maxLength: 2000
+        noteUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+      required: [cardKey, count, lastUsedAt, note, noteUpdatedAt]
+    FeelingActivitySummary:
+      type: object
+      properties:
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeelingCardActivity"
+        recent:
+          type: array
+          items:
+            $ref: "#/components/schemas/FeelingActivityEvent"
+      required: [cards, recent]
+    AdminFeelingProgress:
+      type: object
+      properties:
+        totalChildren:
+          type: integer
+          minimum: 0
+          description: Number of child accounts
+        generatedAt:
+          type: string
+          format: date-time
+        timeZone:
+          type: string
+          enum: [Asia/Amman]
+        children:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminChildFeelingProgress"
+      required: [totalChildren, generatedAt, timeZone, children]
+    AdminChildFeelingProgress:
+      type: object
+      properties:
+        reference:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+          description: Opaque reference used only for creator-authorized history pagination, not an account ID
+        name:
+          type: string
+          description: Saved first and last name from the child account, or a generated private label when no name is available
+          maxLength: 160
+        totalUses:
+          type: integer
+          minimum: 0
+        recent7dUses:
+          type: integer
+          minimum: 0
+        previous7dUses:
+          type: integer
+          minimum: 0
+        usageChangePercent:
+          type: [number, "null"]
+          description: Percentage change in selections compared with the preceding 7 days, never a health-improvement score; null when no previous selections exist
+        firstUsedAt:
+          type: [string, "null"]
+          format: date-time
+        recurringPatterns:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminRecurringUsePattern"
+        cards:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFeelingCardProgress"
+      required: [reference, name, totalUses, recent7dUses, previous7dUses, usageChangePercent, firstUsedAt, recurringPatterns, cards]
+    AdminFeelingCardProgress:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        totalUses:
+          type: integer
+          minimum: 0
+        recent7dUses:
+          type: integer
+          minimum: 0
+        previous7dUses:
+          type: integer
+          minimum: 0
+        usageChangePercent:
+          type: [number, "null"]
+        firstUsedAt:
+          type: [string, "null"]
+          format: date-time
+        lastUsedAt:
+          type: [string, "null"]
+          format: date-time
+        creatorNote:
+          type: string
+          maxLength: 2000
+          description: Annotation written by the authenticated creator, kept separate from child-authored notes
+        creatorNoteUpdatedAt:
+          type: [string, "null"]
+          format: date-time
+      required: [cardKey, totalUses, recent7dUses, previous7dUses, usageChangePercent, firstUsedAt, lastUsedAt, creatorNote, creatorNoteUpdatedAt]
+    AdminFeelingNoteInput:
+      type: object
+      properties:
+        childRef:
+          type: string
+          pattern: "^[A-Za-z0-9_-]{43}$"
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        note:
+          type: string
+          maxLength: 2000
+          description: Empty text clears the saved annotation
+      required: [childRef, cardKey, note]
+    AdminFeelingNote:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        note:
+          type: string
+          maxLength: 2000
+        updatedAt:
+          type: string
+          format: date-time
+      required: [cardKey, note, updatedAt]
+    AdminRecurringUsePattern:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        dayCount:
+          type: integer
+          minimum: 3
+          maximum: 7
+        totalUses:
+          type: integer
+          minimum: 3
+        windowDays:
+          type: integer
+          enum: [7]
+        lastUsedAt:
+          type: string
+          format: date-time
+      required: [cardKey, hour, dayCount, totalUses, windowDays, lastUsedAt]
+    AdminFeelingHistoryEvent:
+      type: object
+      properties:
+        cardKey:
+          $ref: "#/components/schemas/FeelingCardKey"
+        usedAt:
+          type: string
+          format: date-time
+      required: [cardKey, usedAt]
+    AdminFeelingHistoryPage:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AdminFeelingHistoryEvent"
+        nextCursor:
+          type: [string, "null"]
+      required: [events, nextCursor]
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+    VoiceRecording:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        cardKey:
+          type: string
+        cardLabel:
+          type: string
+        durationMs:
+          type: integer
+          minimum: 1
+          maximum: 20500
+        updatedAt:
+          type: string
+          format: date-time
+      required: [id, cardKey, cardLabel, durationMs, updatedAt]
+    VoiceProfile:
+      type: object
+      properties:
+        voice:
+          type: string
+          enum: [female, male]
+        recordingsEnabled:
+          type: boolean
+          default: false
+          description: Defaults to false until the account explicitly enables recordings.
+        recordings:
+          type: array
+          items:
+            $ref: "#/components/schemas/VoiceRecording"
+      required: [voice, recordingsEnabled, recordings]
+    SetVoiceProfileInput:
+      type: object
+      additionalProperties: false
+      minProperties: 1
+      properties:
+        voice:
+          type: string
+          enum: [female, male]
+        recordingsEnabled:
+          type: boolean
+    VoiceUploadRequest:
+      type: object
+      additionalProperties: false
+      properties:
+        cardKey:
+          type: string
+          pattern: "^(hungry|thirsty|toilet|sleepy|cold|happy|sad|pain|help|afraid|drawing:[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})$"
+        cardLabel:
+          type: string
+          minLength: 1
+          maxLength: 64
+        contentType:
+          type: string
+          enum: [audio/webm, audio/mp4, audio/ogg, audio/wav, audio/x-wav, audio/mpeg]
+        size:
+          type: integer
+          minimum: 512
+          maximum: 5242880
+        durationMs:
+          type: integer
+          minimum: 1
+          maximum: 20500
+      required: [cardKey, cardLabel, contentType, size, durationMs]
+    VoiceUploadGrant:
+      type: object
+      properties:
+        uploadId:
+          type: string
+          format: uuid
+        uploadURL:
+          type: string
+          format: uri
+      required: [uploadId, uploadURL]
+    VoiceUploadCommit:
+      type: object
+      additionalProperties: false
+      properties:
+        uploadId:
+          type: string
+          format: uuid
+      required: [uploadId]
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Unauthorized:
+      description: Clerk session required
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Forbidden:
+      description: Request origin or account role does not permit this operation
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    Conflict:
+      description: Account role conflict, device ownership conflict, or resource limit reached
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    RateLimited:
+      description: Request rate limit exceeded
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+    ServiceUnavailable:
+      description: Required storage or notification service is unavailable
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
+  securitySchemes:
+    ClerkSession:
+      type: apiKey
+      in: cookie
+      name: __session
