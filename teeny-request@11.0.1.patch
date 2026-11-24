@@ -1,0 +1,41 @@
+diff --git a/build/src/index.js b/build/src/index.js
+index a101736025f90dc036155e99c0e0b432291e0bcb..79851cf6e9a9a3962f088080defa19b6ce6f44f2 100644
+--- a/build/src/index.js
++++ b/build/src/index.js
+@@ -185,14 +185,21 @@ function teenyRequest(reqOpts, callback) {
+         const requestStream = streamEvents(new stream_1.PassThrough());
+         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         let responseStream;
++        const pipeResponse = () => {
++            // A response handler may synchronously discard a retryable response.
++            // Do not start a pipeline into the transport it has just destroyed.
++            if (requestStream.destroyed) {
++                responseStream.destroy();
++                return;
++            }
++            (0, stream_1.pipeline)(responseStream, requestStream, () => { });
++        };
+         requestStream.once('reading', () => {
+             if (responseStream) {
+-                (0, stream_1.pipeline)(responseStream, requestStream, () => { });
++                pipeResponse();
+             }
+             else {
+-                requestStream.once('response', () => {
+-                    (0, stream_1.pipeline)(responseStream, requestStream, () => { });
+-                });
++                requestStream.once('response', pipeResponse);
+             }
+         });
+         options.compress = false;
+@@ -200,6 +207,10 @@ function teenyRequest(reqOpts, callback) {
+         fetch(uri, options).then(res => {
+             teenyRequest.stats.requestFinished();
+             responseStream = res.body;
++            if (requestStream.destroyed) {
++                responseStream.destroy();
++                return;
++            }
+             responseStream.on('error', (err) => {
+                 requestStream.emit('error', err);
+             });

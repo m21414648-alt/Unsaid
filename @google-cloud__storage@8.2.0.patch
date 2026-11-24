@@ -1,0 +1,68 @@
+diff --git a/build/cjs/src/file.js b/build/cjs/src/file.js
+index 16e24d3b045fb67d87f34c8301325b1b089e5145..92b877ee7944a1c43c25d185f9378ebf1d4119e8 100644
+--- a/build/cjs/src/file.js
++++ b/build/cjs/src/file.js
+@@ -1030,6 +1030,7 @@ class File extends index_js_1.ServiceObject {
+         const tailRequest = options.end < 0;
+         let validateStream = undefined;
+         let request = undefined;
++        let requestStream = undefined;
+         const throughStream = new util_js_2.PassThroughShim();
+         let crc32c = true;
+         let md5 = false;
+@@ -1131,7 +1132,10 @@ class File extends index_js_1.ServiceObject {
+             if (isCompressed && options.decompress) {
+                 transformStreams.push(zlib.createGunzip());
+             }
+-            (0, stream_1.pipeline)(rawResponseStream, ...transformStreams, throughStream, onComplete);
++            // Consume the authenticated/retry transport, not its raw fetch body.
++            // teeny-request already pipelines that body into the transport.
++            // Pipelining it a second time duplicates consumers and lifecycle listeners.
++            (0, stream_1.pipeline)(requestStream, ...transformStreams, throughStream, onComplete);
+         };
+         // Authenticate the request, then pipe the remote API request to the stream
+         // returned to the user.
+@@ -1160,7 +1164,8 @@ class File extends index_js_1.ServiceObject {
+             if (options[util_js_1.GCCL_GCS_CMD_KEY]) {
+                 reqOpts[util_js_1.GCCL_GCS_CMD_KEY] = options[util_js_1.GCCL_GCS_CMD_KEY];
+             }
+-            this.requestStream(reqOpts)
++            requestStream = this.requestStream(reqOpts);
++            requestStream
+                 .on('error', err => {
+                 throughStream.destroy(err);
+             })
+diff --git a/build/esm/src/file.js b/build/esm/src/file.js
+index e94b334de355e07a904473a5723ddc8892b6c45a..287605524bcd80886d3da84a68c2d3759a5f59c3 100644
+--- a/build/esm/src/file.js
++++ b/build/esm/src/file.js
+@@ -990,6 +990,7 @@ class File extends ServiceObject {
+         const tailRequest = options.end < 0;
+         let validateStream = undefined;
+         let request = undefined;
++        let requestStream = undefined;
+         const throughStream = new PassThroughShim();
+         let crc32c = true;
+         let md5 = false;
+@@ -1091,7 +1092,10 @@ class File extends ServiceObject {
+             if (isCompressed && options.decompress) {
+                 transformStreams.push(zlib.createGunzip());
+             }
+-            pipeline(rawResponseStream, ...transformStreams, throughStream, onComplete);
++            // Consume the authenticated/retry transport, not its raw fetch body.
++            // teeny-request already pipelines that body into the transport.
++            // Pipelining it a second time duplicates consumers and lifecycle listeners.
++            pipeline(requestStream, ...transformStreams, throughStream, onComplete);
+         };
+         // Authenticate the request, then pipe the remote API request to the stream
+         // returned to the user.
+@@ -1120,7 +1124,8 @@ class File extends ServiceObject {
+             if (options[GCCL_GCS_CMD_KEY]) {
+                 reqOpts[GCCL_GCS_CMD_KEY] = options[GCCL_GCS_CMD_KEY];
+             }
+-            this.requestStream(reqOpts)
++            requestStream = this.requestStream(reqOpts);
++            requestStream
+                 .on('error', err => {
+                 throughStream.destroy(err);
+             })
