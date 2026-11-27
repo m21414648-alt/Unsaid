@@ -1,0 +1,36 @@
+.touch-card { margin-bottom: 1.25rem; }
+.touch-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; }
+.touch-colors { display: flex; gap: 0.6rem; margin-inline-start: auto; }
+.touch-btn {
+  display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 0.4em;
+  border: 2px solid var(--theme-border, #b8ddf2); border-radius: 14px;
+  background: var(--theme-light, #f5fbff); color: #0f172a; cursor: pointer;
+  font: inherit; font-size: max(14px, 0.78em); font-weight: 700; padding: 0.4rem 1rem;
+}
+.touch-btn[aria-pressed='true'] { background: var(--theme-soft, #e5f5fd); border-color: var(--theme-accent, #2563eb); color: var(--theme-accent, #2563eb); }
+.touch-btn--primary { background: var(--theme-accent, #2563eb); border-color: var(--theme-accent, #2563eb); color: #fff; }
+.touch-btn--danger { color: #b42318; }
+.touch-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.touch-color {
+  width: 48px; height: 48px; border-radius: 50%; background: var(--swatch);
+  border: 3px solid #0f172a; cursor: pointer; padding: 0;
+}
+.touch-color[aria-pressed='true'] { outline: 4px solid var(--theme-accent, #2563eb); outline-offset: 3px; }
+.touch-btn:focus-visible, .touch-color:focus-visible { outline: 3px solid var(--theme-accent, #2563eb); outline-offset: 3px; }
+.touch-paper {
+  margin-top: 1rem; aspect-ratio: 5 / 4; overflow: hidden;
+  border: 2px solid var(--theme-border, #b8ddf2); border-radius: 18px; background: #fff;
+  touch-action: none;
+}
+.touch-paper > * { width: 100%; height: 100%; display: block; }
+.touch-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1rem; }
+.touch-count, .touch-empty, .touch-date { font-size: max(14px, 0.72em); line-height: 1.7; color: #475569; overflow-wrap: anywhere; }
+.touch-msg { margin: 0.6rem 0 0; border-radius: 12px; padding: 0.6rem 0.9rem; font-size: max(14px, 0.75em); line-height: 1.7; overflow-wrap: anywhere; }
+.touch-msg--ok { background: var(--theme-soft, #e5f5fd); color: #0f172a; }
+.touch-msg--error { background: #fdecea; color: #8a1c12; }
+.touch-gallery h2 { margin: 0 0 0.6rem; font-size: 1.1em; }
+.touch-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+.touch-item { display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
+.touch-thumb { aspect-ratio: 5 / 4; overflow: hidden; border: 2px solid var(--theme-border, #b8ddf2); border-radius: 14px; background: #fff; }
+.touch-thumb > * { width: 100%; height: 100%; display: block; }
+.touch-item__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
