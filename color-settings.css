@@ -1,0 +1,126 @@
+.color-settings {
+  margin-top: 1.25rem;
+}
+
+.color-settings__icon {
+  display: grid;
+  width: clamp(3.5rem, 14vw, 4.4rem);
+  height: clamp(3.5rem, 14vw, 4.4rem);
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid var(--theme-border);
+  border-radius: 50%;
+  background: var(--theme-soft);
+}
+
+.color-settings__icon svg {
+  width: 62%;
+  height: 62%;
+}
+
+.color-settings__options {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.7rem;
+  margin-top: clamp(1.5rem, 5vw, 2.25rem);
+}
+
+.color-settings__option {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 4rem;
+  align-items: center;
+  gap: 0.85rem;
+  border: 2px solid var(--theme-border);
+  border-radius: 16px;
+  background: var(--theme-light);
+  color: #334155;
+  cursor: pointer;
+  font-size: max(14px, 0.78em);
+  font-weight: 700;
+  line-height: 1.5;
+  padding: 0.65rem 0.85rem;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+
+.color-settings__option--selected {
+  border-color: var(--theme-accent);
+  background: var(--theme-soft);
+  color: var(--theme-accent);
+}
+
+.color-settings__option:focus-within {
+  outline: 3px solid var(--theme-accent);
+  outline-offset: 3px;
+}
+
+.color-settings__input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.color-settings__swatches {
+  display: flex;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 50%;
+  width: 2.75rem;
+  height: 2.75rem;
+}
+
+.color-settings__swatches i {
+  display: block;
+  flex: 1;
+}
+
+.color-settings__label {
+  min-width: 0;
+  flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.color-settings__check {
+  display: grid;
+  width: 1.6rem;
+  height: 1.6rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 2px solid #b6c6d4;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.color-settings__option--selected .color-settings__check {
+  border-color: var(--theme-accent);
+  background: var(--theme-accent);
+  color: #fff;
+}
+
+.color-settings__check svg {
+  width: 0.95rem;
+  height: 0.95rem;
+}
+
+@media (min-width: 640px) {
+  .color-settings__options {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .color-settings__option {
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    padding: 1rem 0.6rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .color-settings__option {
+    transition: none;
+  }
+}

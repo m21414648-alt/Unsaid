@@ -1,0 +1,8 @@
+.account-screen { min-height: 100dvh; padding: 28px 16px 48px; background: linear-gradient(155deg, #ffffff 0%, var(--theme-light) 25%, var(--theme-wash) 80%); display: flex; flex-direction: column; align-items: center; gap: 24px; }
+.account-screen > .settings-back { align-self: flex-start; }
+.account-intro { max-width: 440px; text-align: center; color: #0f172a; }
+.account-intro h1 { font-size: 1.6em; font-weight: 700; margin: 0 0 12px; }
+.account-intro p { line-height: 1.9; }
+.cl-formFieldInput::placeholder { color: #64748b; opacity: 1; }
+.cl-formFieldInput:focus-visible { outline: 2px solid var(--theme-accent); outline-offset: 2px; }
+.cl-footerActionLink:hover { text-decoration: underline; }
