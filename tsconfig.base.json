@@ -1,5 +1,5 @@
 {
-  "compilerOptions": {
+  "extends": "./tsconfig.base.json",
     "incremental": true,
     "isolatedModules": true,
     "lib": ["es2022"],
